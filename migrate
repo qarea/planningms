@@ -286,134 +286,25 @@ add_config listen           127.0.0.1:0
 add_config basepath
 add_config real_ip_header
 
-INSTALL
-VERSION 0.1.0
-
 mkdir -p var/timespent/backup
 
 add_config timespent/backup/folder    var/timespent/backup
 add_config timespent/backup/frequency 1m
 
-INSTALL
-VERSION 0.2.0
-
-INSTALL
-VERSION 0.3.0
-
 add_config rsa_public_key
-
-INSTALL
-VERSION 0.4.0
 
 add_config tracker_interface_addr 
 
 add_config plannings/max_age             24h
 add_config plannings/oldest_last_update   6h
 
-restart main
-
-INSTALL
-VERSION 0.5.0
-
 mysql          .release/sql/000_create_basic_tables.sql
 rollback_mysql .release/sql/000_drop_basic_tables.sql
 
-restart main
-
-INSTALL
-VERSION 0.6.0
-
-
-restart main
-
-INSTALL
-VERSION 0.6.1
-
-
-restart main
-
-INSTALL
-VERSION 0.6.2
-
-
-restart main
-
-INSTALL
-VERSION 0.6.3
-
 del_config tracker_interface_addr
-
-restart main
-
-INSTALL
-VERSION 0.7.0
-
-
-restart main
-
-INSTALL
-VERSION 0.8.0
-
-
-restart main
-
-INSTALL
-VERSION 0.8.1
-
-
-restart main
-
-INSTALL
-VERSION 0.9.0
 
 mysql          .release/sql/001_add_duedate_estim_columns.sql
 rollback_mysql .release/sql/001_remove_duedate_estim_columns.sql
-
-restart main
-
-INSTALL
-VERSION 0.10.0
-
-
-restart main
-
-INSTALL
-VERSION 0.11.0
-
-
-restart main
-
-INSTALL
-VERSION 0.12.0
-
-
-restart main
-
-INSTALL
-VERSION 0.13.0
-
-
-restart main
-
-INSTALL
-VERSION 0.14.0
-
-restart main
-
-INSTALL
-VERSION 0.15.0
-
-
-restart main
-
-INSTALL
-VERSION 0.16.0
-
-
-restart main
-
-INSTALL
-VERSION 0.17.0
 
 add_config lock_timeout          1s
 
@@ -429,107 +320,6 @@ after_downgrade
   mv config/http/real_ip_header config/real_ip_header
   rm -r config/http
 
-restart main
-
-INSTALL
-VERSION 0.18.0
-
 mysql          .release/sql/002_add_issue_done.sql
 rollback_mysql .release/sql/002_remove_issue_done.sql
-
-
-restart main
-
-INSTALL
-VERSION 0.19.0
-
-
-restart main
-
-INSTALL
-VERSION 0.20.0
-
-
-restart main
-
-INSTALL
-VERSION 0.21.0
-
-
-restart main
-
-INSTALL
-VERSION 0.22.0
-
-
-restart main
-
-INSTALL
-VERSION 0.23.0
-
-
-restart main
-
-INSTALL
-VERSION 0.24.0
-
-
-restart main
-
-INSTALL
-VERSION 0.25.0
-
-
-restart main
-
-INSTALL
-VERSION 0.26.0
-
-
-restart main
-
-INSTALL
-VERSION 0.27.0
-
-
-restart main
-
-INSTALL
-VERSION 0.28.0
-
-
-restart main
-
-INSTALL
-VERSION 0.29.0
-
-
-restart main
-
-INSTALL
-VERSION 0.30.0
-
-
-restart main
-
-INSTALL
-VERSION 0.31.0
-
-
-restart main
-
-INSTALL
-VERSION 0.32.0
-
-
-restart main
-
-INSTALL
-VERSION 0.33.0
-
-
-restart main
-
-INSTALL
-VERSION 0.34.0
 
