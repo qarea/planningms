@@ -42,6 +42,6 @@ script:
   - ./build -t
 
 after_success:
-  - overalls -project=github.com/qarea/redminems
+  - overalls -project=github.com/qarea/planningms
   - goveralls -coverprofile=overalls.coverprofile -service=travis-ci
 
