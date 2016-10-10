@@ -4,7 +4,10 @@
 
 source "$1/../staging.setup"
 
-testdb-creds
+echo 127.0.0.1    > config/mysql/host
+echo 3306         > config/mysql/port
+echo planning_db  > config/mysql/db
+echo root         > config/mysql/login
 
 narada-setup-mysql --clean
 narada-setup-mysql
