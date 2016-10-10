@@ -1,13 +1,17 @@
 package rpcsvc
 
 import (
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/powerman/narada-go/narada/staging"
-	. "gopkg.in/check.v1"
 )
 
-func TestMain(m *testing.M) { os.Exit(staging.TearDown(m.Run())) }
+func TestMain(m *testing.M) {
+	rand.Seed(time.Now().Unix())
+	os.Exit(staging.TearDown(m.Run()))
+}
 
-func Test(t *testing.T) { TestingT(t) }
+//func Test(t *testing.T) { TestingT(t) }

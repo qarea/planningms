@@ -2,20 +2,26 @@
 # Default setup for Narada staging.
 # Use by symlinking as ./…/testdata/staging.setup or by executing from it:
 #   source "$1/../…/staging.setup"
+ln -s "$1/../../bin"
 # Example:
 #   echo value > config/required
 #   touch var/required.db
 ### narada-plugin-go-service
 
-
-if [[ -z "$ROOTPATH" ]]; then
-    ROOTPATH="$1/.."
-fi
-
-ln -s "$ROOTPATH/bin"
-
 mkdir -p config/http
 
 echo 127.0.0.1:0                        > config/http/listen
+echo 1s                                 > config/http/timeout
 echo 1s                                 > config/lock_timeout
 echo 1                                  > config/rsa_public_key
+
+mkdir -p config/timespent/backup
+
+echo test                               > config/timespent/backup/folder
+echo 1m                                 > config/timespent/backup/frequency
+
+mkdir -p config/plannings
+
+echo 1m                                 > config/plannings/max_age 
+echo 1m                                 > config/plannings/oldest_last_update
+

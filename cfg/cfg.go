@@ -10,20 +10,41 @@ import (
 var log = narada.NewLog("")
 
 var (
-	Debug        bool
-	LockTimeout  time.Duration
+	// Debug enable debug logs
+	Debug bool
+
+	// LockTimeout for narada.SharedLock
+	LockTimeout time.Duration
+
+	// RSAPublicKey for JWT token verification
 	RSAPublicKey []byte
-	MySQL        struct {
+
+	// MySQL configuration
+	MySQL struct {
 		Host     string
 		Port     int
 		DB       string
 		Login    string
 		Password string
 	}
+
+	// HTTP configuration for application http server
 	HTTP struct {
 		Listen       string
 		BasePath     string
 		RealIPHeader string
+	}
+
+	// TimeSpent configuration for backup of in-memory data
+	TimeSpent struct {
+		Folder    string
+		Frequency time.Duration
+	}
+
+	// Plannings configuration for plannings types
+	Plannings struct {
+		MaxAge           time.Duration
+		OldestLastUpdate time.Duration
 	}
 )
 
@@ -59,6 +80,15 @@ func load() error {
 	if err != nil {
 		return err
 	}
+
+	TimeSpent.Folder = narada.GetConfigLine("timespent/backup/folder")
+	if TimeSpent.Folder == "" {
+		log.Fatal("Please setup backup folder timespent/backup/folder")
+	}
+	TimeSpent.Frequency = narada.GetConfigDuration("timespent/backup/frequency")
+
+	Plannings.MaxAge = narada.GetConfigDuration("plannings/max_age")
+	Plannings.OldestLastUpdate = narada.GetConfigDuration("plannings/oldest_last_update")
 
 	LockTimeout = narada.GetConfigDuration("lock_timeout")
 	return nil

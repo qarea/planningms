@@ -3,10 +3,8 @@ package mysqldb
 import (
 	"fmt"
 
-	"../cfg"
 	"github.com/jmoiron/sqlx"
-
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/qarea/planningms/cfg"
 )
 
 //New creates new database connection for mysql database
