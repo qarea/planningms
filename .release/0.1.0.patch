@@ -1,0 +1,1440 @@
+diff --git a/LICENSE b/LICENSE
+new file mode 100644
+index 0000000..7073ac5
+--- /dev/null
++++ b/LICENSE
+@@ -0,0 +1,21 @@
++MIT License
++
++Copyright (c) 2016 QArea
++
++Permission is hereby granted, free of charge, to any person obtaining a copy
++of this software and associated documentation files (the "Software"), to deal
++in the Software without restriction, including without limitation the rights
++to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
++copies of the Software, and to permit persons to whom the Software is
++furnished to do so, subject to the following conditions:
++
++The above copyright notice and this permission notice shall be included in all
++copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
++IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
++FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
++AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
++LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
++OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
++SOFTWARE.
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..1738229
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1,6 @@
++Planning service [![GoDoc](https://godoc.org/github.com/qarea/planningms?status.svg)](https://godoc.org/github.com/qarea/planningms) [![Go Report Card](https://goreportcard.com/badge/github.com/qarea/planningms)](https://goreportcard.com/report/github.com/qarea/planningms)
++====
++
++Test coverage:
++
++![Test coverage](test-cover.png)
+diff --git a/doc/narada-base.adoc b/doc/narada-base.adoc
+new file mode 100644
+index 0000000..73e0105
+--- /dev/null
++++ b/doc/narada-base.adoc
+@@ -0,0 +1,213 @@
++Narada base
++===========
++
++This project was created using https://github.com/powerman/narada-base
++(template for new projects designed for Narada framework).
++
++This document describe how to use files provided by this template.
++
++
++== Setup
++
++=== ./build [-h|--help] [-t|--test]
++
++You usually should edit it to set commands used to build and test your
++project.
++
++Default implementation will compile and install Go commands into `bin/`.
++
++Also you may need to change commands used to run build-time tests if your
++project doesn't use http://testanything.org/[TAP]-compatible tests in
++`t/**/*.t` and/or `bin/*.t` files.
++
++Run with `-t|--test` to enable build-time tests.
++
++=== ./release [-h|--help|-n|--major|--minor|--patch|<version>]
++
++You usually should edit it to set commands needed to release your project.
++
++Default implementation will generate patch file with differences since
++previous released version for all files in your project repo (except
++files listed in `.releaseignore`) and tgz file with compiled binaries
++(`bin/*`).
++
++Generated files will be saved into `.release/` subdirectory. You can
++remove files you don't need anymore. You can re-generate files for any
++commit by running `git checkout <commit>; ./release`.
++
++NOTE: Re-generated files may differ from original ones, for ex. in case
++different compiler was used or build date was embedded in generated files
++or generated files was manually changed (this may happens in advanced
++cases when you join two branches of project).
++
++Run with `-n` to disable build-time tests.
++
++=== ./deploy [-n] [<version>]
++
++You usually should edit it to set commands needed to deploy your project.
++
++Default implementation will deploy your project into `_live/` subdirectory
++and suitable only for local testing while development.
++
++Also you may need to change commands used to run tests after deploy if
++your project doesn't use http://testanything.org/[TAP]-compatible tests in
++`t/**/*.t` files.
++
++Run with `-n` to disable deploy-time tests.
++
++=== ./deploy_server [<version>]
++
++You should edit it to set `addr` (SSH account on remote server) and `path`
++(project's directory on remove server) variables.
++
++Default implementation will upload and install/upgrade project on remote
++server using ssh.
++
++=== migrate
++
++Before you'll `./release` first version you can edit it to change files
++which will be created in directory where you deploy your project by first
++release (this isn't required, you always can change them later in next
++releases). Here is some changes you may like to do:
++
++- `config/mysql/` and `var/mysql/`: you may like to remove it if your
++  project doesn't use MySQL
++- `config/qmail/` and `var/qmail/`: you may like to remove it if your
++  project doesn't use `~/.qmail*` to handle incoming emails
++- `config/crontab/backup`:
++  * make sure default backup schedule (daily incremental backups, new full
++    backup every week) is suitable for you or change it
++  * replace `echo Reminder: ...` with real command used to (recommended)
++    encrypt or compress and upload your backup somewhere, for example:
+++
++[source,sh]
++----
++narada-backup &&
++rm -f var/backup/full.tar.gpg &&
++gpg --s2k-count 1000000 --batch --cipher-algo AES256 -c \
++    --passphrase-file config/backup/pass var/backup/full.tar &&
++scp var/backup/full.tar.gpg USER@HOST:PATH/`date +"%Y%m%d-%H%M%S"`.full.gpg
++----
++
++
++== Usage
++
++While developing new version of your project you should add any extra
++upgrade/downgrade operations needed to migrate between previous and new
++versions into `migrate` file. Default operations like copying binary files
++or patching text files will be automatically added into `migrate` when
++you'll run `./release`, but there are may be some extra operations which
++you'll have to add manually, like:
++
++- create/modify/remove config/data files or directories in project's
++  deploy directory
++- change database scheme
++- convert data in database
++- restart background processes/services affected by these changes
++
++NOTE: When you're doing `git merge` or `git cherry-pick` you usually
++should not modify part of `migrate` files which was already included in
++previous releases - you can make changes only after latest `VERSION` line.
++This restriction doesn't apply to `git rebase` or in case when you're
++fixing wrong downgrade operations for already released version.
++
++You can run `./build` or `./build --test` at any time just to make sure
++your project builds ok and pass build-time tests.
++
++You can run `./release && ./deploy` at any time (even when you've not
++committed yet changes in work directory) to release and deploy into
++`_live/` current project to check how it works before committing changes
++into repository.
++
++When you're ready to release current HEAD and tag it as new version you
++should run `./release --major|--minor|--patch|<version>`.
++
++To deploy one of already released versions into `_live/` you can run
++`./deploy [<version>]`.
++
++To deploy some version on remote server copy `.release/*` files related to
++that version into `.release/` subdirectory of project's deploy directory
++on server and then run `narada-install <version>` in project's deploy
++directory on server. If you're using SSH to access your server then you
++can just run `./deploy_server [<version>]`.
++
++If you'll add TAP-compatible tests into `t/build/` then they'll be
++automatically executed by `./build --test` in work directory. If you'll
++add TAP-compatible tests into `t/devel/` then they'll be automatically
++executed by `./deploy` in deploy (`_live/`) directory.
++
++
++== Advanced usage
++
++=== Joining multiple upgrades into one
++
++If you've released 50 versions from 1.0.0 to 1.50.0 then it may took to
++much time to deploy your project on new server because `narada-install`
++doing this step by step, version by version… plus generate 49 useless
++backups. In this case you would like to prepare alternative release for
++version 1.50.0 which you'll be able to deploy on new server in single
++step. Here is how to do this (the `<from>` is 1.0.0 and `<to>` is 1.50.0
++for this example):
++
++----
++git checkout <to>
++git reset --soft <from>
++----
++
++Next, modify `migrate` file by removing all `INSTALL` and `VERSION ...` lines after
++`VERSION <from>` (do not remove this one). You also may need other changes
++to make sure all migrate operations after that line will correctly migrate
++between `<from>` and `<to>`. Then:
++
++----
++git add migrate
++git commit -m 'combined upgrade <from>-<to>'
++./release <from>-<to>
++echo -ne 'VERSION <to>\n\n' >> .release/<from>-<to>.migrate
++echo -ne 'VERSION <to>\n\n' >> migrate
++----
++
++TODO Few more actions are needed to complete this (modified migrate files
++should be added to the repo into the last commit, this modified commit
++should be re-tagged and force-pushed to origin repo).
++
++=== Merging different project versions
++
++If you've stable project branch with versions 1.x and unstable branch with
++versions 2.x, and you wanna provide upgrade path from version 1.50.0 to
++version 2.8.0, then you'll need to prepare alternative release for version
++2.8.0 (existing one will upgrade from 2.7.0). Here is how to do this (the
++`<from>` is 1.50.0 and `<to>` is 2.8.0 for this example):
++
++----
++git checkout <from>
++git merge <to>
++----
++
++Next, resolve conflict on `migrate` file: it must be same as it was in
++`<from>` with appended operations needed to migrate between `<from>` and
++`<to>`.
++
++Chances are this won't be ease, you may need to develop new tools for data
++migrations, and as result contents of deploy directory may not match
++original `<to>` version. In this case you'll have to release intermediate
++version first:
++
++----
++git add .
++git commit -m 'merge upgrade <from>-<to>-pre'
++./release <from>-<to>-pre
++----
++
++Then act similar to "Joining multiple upgrades into one" case but keep
++current `migrate`:
++
++----
++git checkout <to>
++git reset --soft <from>-<to>-pre
++git checkout <from>-<to>-pre migrate
++git add migrate
++git commit -m 'merge upgrade <from>-<to>'
++./release <from>-<to>
++echo -ne 'VERSION <to>\n\n' >> .release/<from>-<to>.migrate
++----
+diff --git a/doc/narada-plugin-go-service.adoc b/doc/narada-plugin-go-service.adoc
+new file mode 100644
+index 0000000..f3032fc
+--- /dev/null
++++ b/doc/narada-plugin-go-service.adoc
+@@ -0,0 +1,62 @@
++Narada plugin: Go service
++=========================
++
++This project was created using https://github.com/powerman/narada-plugin-go-service
++(plugin for template for new projects designed for Narada framework).
++
++This document describe how to use files provided by this plugin.
++
++
++== Dependencies
++
++Require https://github.com/powerman/narada-plugin-runit[Narada plugin
++runit].
++
++Require https://github.com/powerman/narada-plugin-socklog[Narada plugin
++socklog].
++
++Probably easiest way to get both plugins and also build scripts for Go
++projects is start your project using
++https://github.com/powerman/narada-base/tree/go-socklog[go-socklog branch]
++of https://github.com/powerman/narada-base[narada-base].
++
++
++== Usage
++
++It also may be very convenient to automate restart of main service on each
++release. For example, if you're using narada-base's `./release` script then you
++can modify it this way:
++
++[source,diff]
++----
++ release_version() {
++         list_versions "$2" | grep -q -x -F "$1" && return 0
+++        echo -ne "\nrestart main\n" >> "$2"
++         echo -ne "\nINSTALL $1\nVERSION $1\n\n" >> "$2"
++ }
++----
++
++
++== Setup
++
++After new deploy you'll need to configure at least these:
++
++- `config/listen`
++
++If this project will be attached to some path on website instead of full
++website, you'll need to setup this path too. For example, if this project will
++be attached to http://site/app/, then:
++
++[source,sh]
++----
++echo /app > config/basepath
++----
++
++If this project will be installed behind some front-end web server like
++nginx and will need to know real user's IP provided by front-end web
++server in some HTTP header then set name of that header:
++
++[source,sh]
++----
++echo X-Real-REMOTE_ADDR > config/real_ip_header
++----
+diff --git a/doc/narada-plugin-runit.adoc b/doc/narada-plugin-runit.adoc
+new file mode 100644
+index 0000000..26a6fd4
+--- /dev/null
++++ b/doc/narada-plugin-runit.adoc
+@@ -0,0 +1,26 @@
++Narada plugin: runit
++====================
++
++This project was created using https://github.com/powerman/narada-plugin-runit
++(plugin for template for new projects designed for Narada framework).
++
++This document describe how to use files provided by this plugin.
++
++
++== Dependencies
++
++You should have http://smarden.org/runit/[runit] installed (either
++system-wide or in your home directory with binaries available in `$PATH`).
++
++
++== Usage
++
++Just create `./service/` directory with subdirectories for each service,
++and put there executable `run` and (optional) `log/run` files for these
++services. All services will be automatically started, and you can then
++control them using `sv <COMMAND> ./service/<SERVICE>` in project's root
++directory. For more documentation see runit website or man pages for
++sv(8), runsv(8) and runsvdir(8).
++
++You can see example of such service in
++https://github.com/powerman/narada-plugin-socklog/tree/master[narada-plugin-socklog].
+diff --git a/doc/narada-plugin-socklog.adoc b/doc/narada-plugin-socklog.adoc
+new file mode 100644
+index 0000000..32490dc
+--- /dev/null
++++ b/doc/narada-plugin-socklog.adoc
+@@ -0,0 +1,33 @@
++Narada plugin: socklog
++======================
++
++This project was created using https://github.com/powerman/narada-plugin-socklog
++(plugin for template for new projects designed for Narada framework).
++
++This document describe how to use files provided by this plugin.
++
++
++== Dependencies
++
++You should have http://smarden.org/socklog/[socklog] installed (either
++system-wide or in your home directory with binaries available in `$PATH`).
++
++Require https://github.com/powerman/narada-plugin-runit[Narada plugin
++runit].
++
++
++== Usage
++
++Configure all applications in your project to send their logs to syslog,
++using UNIX socket `var/lock.sock` instead of default `/dev/log` (required
++configuration changes are in plugin's `migrate` file).
++
++Use `var/log/config` to configure
++http://smarden.org/runit/svlogd.8.html[svlogd(8)] (log size, rotation,
++filtering, etc.).
++
++You can store different messages in different log files. To implement this
++you should create several subdirectories in `var/log/` with
++`var/log/*/config` files, to define which messages should be stored in
++each log directory, and restart log/log service with
++`sv t ./service/log/log/`.
+diff --git a/doc/narada-tgms-base.adoc b/doc/narada-tgms-base.adoc
+new file mode 100644
+index 0000000..4ca88bd
+--- /dev/null
++++ b/doc/narada-tgms-base.adoc
+@@ -0,0 +1,66 @@
++Narada tgms base
++================
++
++This project based on https://github.com/powerman/narada-base/tree/go-socklog and https://github.com/powerman/narada-plugin-go-service
++
++== Additions/changes to base projects
++
++=== ./migrate
++
++.Add configuration files:
++
++* http/listen (default: 127.0.0.1:0)
++* http/basepath
++* http/real_ip_header
++* lock_timeout (default: 1s, for narada shared lock)
++* rsa_public_key (for JWT verification)
++
++
++=== ./release
++
++* Add application restart to migrate file on releases
++* major/minor/patch releases possible only in master tree
++
++=== ./deploy_server
++
++Changed according to our deployment process and requires additional env variables:
++
++* DEPLOY_ADDR - for ssh connection
++* DEPLOY_PATH - folder name for application 
++* KEYPATH - path to ssh key (optional)
++
++=== ./deploy_prod
++ 
++Like deploy_server, but requires version as argument
++
++=== ./staging-mysql.setup
++
++Example of staging.setup for testing mysql related packages +
++It prepares database, make dump to recreate it in tests. But you need to add your sql migration scripts +
++Requires https://gitlab.qarea.org/tgms/testdb to be installed, setuped and used in tests + 
++Depends on ./staging.setup script +
++Could be symlinked with "ln -s" from "testdata" folder of needed package
++
++=== ./staging-mysql.teardown
++
++Example of staging.teardown for testing musql related packages +
++Cleans mysql with "narada-mysql-setup --clean" after testing + 
++Could be symlinked with "ln -s" from "testdata" folder of needed package
++
++=== Packages
++
++==== cfg
++
++.Extended with:
++* HTTP related values (listen, real_ip_header, basepath) moved under config/http folder
++* MySQL configuration variables
++* RSAPublicKey variable for JWT verification
++* LockTimeout variable for narada shared lock (default: 1s)
++
++==== mysqldb
++
++Package to create database connection with sqlx library
++
++==== rpcsvc
++
++Change RPC struct name to API as we used in all our services
+diff --git a/doc/nginx-example/conf/README.md b/doc/nginx-example/conf/README.md
+new file mode 100644
+index 0000000..f32e966
+--- /dev/null
++++ b/doc/nginx-example/conf/README.md
+@@ -0,0 +1,7 @@
++Component-config files
++----------------------
++
++Each of these files is intended to be included in a server block. Not all of
++the files here are used - they are available to be included as required. The
++`basic.conf` file includes the rules which are recommended to always be
++defined.
+diff --git a/doc/nginx-example/conf/basic.conf b/doc/nginx-example/conf/basic.conf
+new file mode 100644
+index 0000000..b5ca586
+--- /dev/null
++++ b/doc/nginx-example/conf/basic.conf
+@@ -0,0 +1,6 @@
++# Basic h5bp rules
++
++include conf/directive-only/x-ua-compatible.conf;
++include conf/location/expires.conf;
++include conf/location/cross-domain-fonts.conf;
++include conf/location/protect-system-files.conf;
+diff --git a/doc/nginx-example/conf/directive-only/cache-file-descriptors.conf b/doc/nginx-example/conf/directive-only/cache-file-descriptors.conf
+new file mode 100644
+index 0000000..ed312c0
+--- /dev/null
++++ b/doc/nginx-example/conf/directive-only/cache-file-descriptors.conf
+@@ -0,0 +1,19 @@
++# This tells Nginx to cache open file handles, "not found" errors, metadata about files and their permissions, etc.
++#
++# The upside of this is that Nginx can immediately begin sending data when a popular file is requested,
++# and will also know to immediately send a 404 if a file is missing on disk, and so on.
++#
++# However, it also means that the server won't react immediately to changes on disk, which may be undesirable.
++#
++# In the below configuration, inactive files are released from the cache after 20 seconds, whereas
++# active (recently requested) files are re-validated every 30 seconds.
++#
++# Descriptors will not be cached unless they are used at least 2 times within 20 seconds (the inactive time).
++#
++# A maximum of the 1000 most recently used file descriptors can be cached at any time.
++#
++# Production servers with stable file collections will definitely want to enable the cache.
++open_file_cache          max=1000 inactive=20s;
++open_file_cache_valid    30s;
++open_file_cache_min_uses 2;
++open_file_cache_errors   on;
+diff --git a/doc/nginx-example/conf/directive-only/charset.conf b/doc/nginx-example/conf/directive-only/charset.conf
+new file mode 100644
+index 0000000..8a99f70
+--- /dev/null
++++ b/doc/nginx-example/conf/directive-only/charset.conf
+@@ -0,0 +1 @@
++charset utf-8;
+diff --git a/doc/nginx-example/conf/directive-only/cross-domain-ajax.conf b/doc/nginx-example/conf/directive-only/cross-domain-ajax.conf
+new file mode 100644
+index 0000000..0c98db9
+--- /dev/null
++++ b/doc/nginx-example/conf/directive-only/cross-domain-ajax.conf
+@@ -0,0 +1,2 @@
++# Cross domain AJAX requests
++add_header "Access-Control-Allow-Origin" "*";
+diff --git a/doc/nginx-example/conf/directive-only/no-transform.conf b/doc/nginx-example/conf/directive-only/no-transform.conf
+new file mode 100644
+index 0000000..1bb5fc1
+--- /dev/null
++++ b/doc/nginx-example/conf/directive-only/no-transform.conf
+@@ -0,0 +1,2 @@
++# Prevent mobile network providers from modifying your site
++add_header "Cache-Control" "no-transform";
+diff --git a/doc/nginx-example/conf/directive-only/protect-local-sites.conf b/doc/nginx-example/conf/directive-only/protect-local-sites.conf
+new file mode 100644
+index 0000000..71b29f1
+--- /dev/null
++++ b/doc/nginx-example/conf/directive-only/protect-local-sites.conf
+@@ -0,0 +1,4 @@
++# Prevent access to local websites from Internet.
++allow 192.168.2.0/24;
++allow 127.0.0.0/8;
++deny all;
+diff --git a/doc/nginx-example/conf/directive-only/x-ua-compatible.conf b/doc/nginx-example/conf/directive-only/x-ua-compatible.conf
+new file mode 100644
+index 0000000..174bf41
+--- /dev/null
++++ b/doc/nginx-example/conf/directive-only/x-ua-compatible.conf
+@@ -0,0 +1,3 @@
++# Force the latest IE version
++# Use ChromeFrame if it's installed for a better experience for the poor IE folk
++add_header "X-UA-Compatible" "IE=Edge,chrome=1";
+diff --git a/doc/nginx-example/conf/location/cache-busting.conf b/doc/nginx-example/conf/location/cache-busting.conf
+new file mode 100644
+index 0000000..7124a3a
+--- /dev/null
++++ b/doc/nginx-example/conf/location/cache-busting.conf
+@@ -0,0 +1,12 @@
++# Built-in filename-based cache busting
++
++# https://github.com/h5bp/html5-boilerplate/blob/5370479476dceae7cc3ea105946536d6bc0ee468/.htaccess#L403
++# This will route all requests for /css/style.20120716.css to /css/style.css
++# Read also this: github.com/h5bp/html5-boilerplate/wiki/cachebusting
++# This is not included by default, because it'd be better if you use the build
++# script to manage the file names.
++location ~* (.+)\.(?:\d\d\d\d\d\d\d\d+)\.(js|css|png|jpg|jpeg|gif)$ {
++	try_files $uri $1.$2;
++	expires 1y;
++	add_header Cache-Control "public";
++}
+diff --git a/doc/nginx-example/conf/location/cross-domain-fonts.conf b/doc/nginx-example/conf/location/cross-domain-fonts.conf
+new file mode 100644
+index 0000000..c8dda82
+--- /dev/null
++++ b/doc/nginx-example/conf/location/cross-domain-fonts.conf
+@@ -0,0 +1,13 @@
++# Cross domain webfont access
++location ~* \.(?:ttf|ttc|otf|eot|woff)$ {
++	add_header "Access-Control-Allow-Origin" "*";
++
++	# Also, set cache rules for webfonts.
++	#
++	# See http://wiki.nginx.org/HttpCoreModule#location
++	# And https://github.com/h5bp/server-configs/issues/85
++	# And https://github.com/h5bp/server-configs/issues/86
++	expires 1M;
++	access_log off;
++	add_header Cache-Control "public";
++}
+diff --git a/doc/nginx-example/conf/location/expires.conf b/doc/nginx-example/conf/location/expires.conf
+new file mode 100644
+index 0000000..4aad47f
+--- /dev/null
++++ b/doc/nginx-example/conf/location/expires.conf
+@@ -0,0 +1,43 @@
++# Expire rules for static content
++
++# No default expire rule. This config mirrors that of apache as outlined in the
++# html5-boilerplate .htaccess file. However, nginx applies rules by location,
++# the apache rules are defined by type. A concequence of this difference is that
++# if you use no file extension in the url and serve html, with apache you get an
++# expire time of 0s, with nginx you'd get an expire header of one month in the
++# future (if the default expire rule is 1 month). Therefore, do not use a
++# default expire rule with nginx unless your site is completely static
++
++# cache.appcache, your document html and data
++# location ~* \.(?:manifest|appcache|html?|xml|json)$ {
++# 	expires -1;
++# 	access_log logs/static.log;
++# }
++
++# Feed
++location ~* \.(?:rss|atom)$ {
++	expires 1h;
++	add_header Cache-Control "public";
++}
++
++# Media: images, icons, video, audio, HTC
++location ~* \.(?:jpg|jpeg|gif|png|ico|cur|gz|svg|svgz|mp4|ogg|ogv|webm|htc)$ {
++	expires 1M;
++	access_log off;
++	add_header Cache-Control "public";
++}
++
++# CSS and Javascript
++location ~* \.(?:css|js)$ {
++	expires 1y;
++	access_log off;
++	add_header Cache-Control "public";
++}
++
++# WebFonts
++# If you are NOT using cross-domain-fonts.conf, uncomment the following directive
++# location ~* \.(?:ttf|ttc|otf|eot|woff)$ {
++# 	expires 1M;
++# 	access_log off;
++# 	add_header Cache-Control "public";
++# }
+diff --git a/doc/nginx-example/conf/location/protect-system-files.conf b/doc/nginx-example/conf/location/protect-system-files.conf
+new file mode 100644
+index 0000000..58096ac
+--- /dev/null
++++ b/doc/nginx-example/conf/location/protect-system-files.conf
+@@ -0,0 +1,10 @@
++# Prevent clients from accessing hidden files (starting with a dot)
++# This is particularly important if you store .htpasswd files in the site hierarchy
++location ~* (?:^|/)\. {
++	deny all;
++}
++
++# Prevent clients from accessing to backup/config/source files
++location ~* (?:\.(?:bak|config|sql|fla|psd|ini|log|sh|inc|swp|dist)|~)$ {
++	deny all;
++}
+diff --git a/doc/nginx-example/fastcgi.conf b/doc/nginx-example/fastcgi.conf
+new file mode 100644
+index 0000000..ac9ff92
+--- /dev/null
++++ b/doc/nginx-example/fastcgi.conf
+@@ -0,0 +1,25 @@
++
++fastcgi_param  SCRIPT_FILENAME    $document_root$fastcgi_script_name;
++fastcgi_param  QUERY_STRING       $query_string;
++fastcgi_param  REQUEST_METHOD     $request_method;
++fastcgi_param  CONTENT_TYPE       $content_type;
++fastcgi_param  CONTENT_LENGTH     $content_length;
++
++fastcgi_param  SCRIPT_NAME        $fastcgi_script_name;
++fastcgi_param  REQUEST_URI        $request_uri;
++fastcgi_param  DOCUMENT_URI       $document_uri;
++fastcgi_param  DOCUMENT_ROOT      $document_root;
++fastcgi_param  SERVER_PROTOCOL    $server_protocol;
++fastcgi_param  HTTPS              $https if_not_empty;
++
++fastcgi_param  GATEWAY_INTERFACE  CGI/1.1;
++fastcgi_param  SERVER_SOFTWARE    nginx/$nginx_version;
++
++fastcgi_param  REMOTE_ADDR        $remote_addr;
++fastcgi_param  REMOTE_PORT        $remote_port;
++fastcgi_param  SERVER_ADDR        $server_addr;
++fastcgi_param  SERVER_PORT        $server_port;
++fastcgi_param  SERVER_NAME        $server_name;
++
++# PHP only, required if PHP was built with --enable-force-cgi-redirect
++fastcgi_param  REDIRECT_STATUS    200;
+diff --git a/doc/nginx-example/fastcgi_params b/doc/nginx-example/fastcgi_params
+new file mode 100644
+index 0000000..71e2c2e
+--- /dev/null
++++ b/doc/nginx-example/fastcgi_params
+@@ -0,0 +1,24 @@
++
++fastcgi_param  QUERY_STRING       $query_string;
++fastcgi_param  REQUEST_METHOD     $request_method;
++fastcgi_param  CONTENT_TYPE       $content_type;
++fastcgi_param  CONTENT_LENGTH     $content_length;
++
++fastcgi_param  SCRIPT_NAME        $fastcgi_script_name;
++fastcgi_param  REQUEST_URI        $request_uri;
++fastcgi_param  DOCUMENT_URI       $document_uri;
++fastcgi_param  DOCUMENT_ROOT      $document_root;
++fastcgi_param  SERVER_PROTOCOL    $server_protocol;
++fastcgi_param  HTTPS              $https if_not_empty;
++
++fastcgi_param  GATEWAY_INTERFACE  CGI/1.1;
++fastcgi_param  SERVER_SOFTWARE    nginx/$nginx_version;
++
++fastcgi_param  REMOTE_ADDR        $remote_addr;
++fastcgi_param  REMOTE_PORT        $remote_port;
++fastcgi_param  SERVER_ADDR        $server_addr;
++fastcgi_param  SERVER_PORT        $server_port;
++fastcgi_param  SERVER_NAME        $server_name;
++
++# PHP only, required if PHP was built with --enable-force-cgi-redirect
++fastcgi_param  REDIRECT_STATUS    200;
+diff --git a/doc/nginx-example/fastcgi_params_path b/doc/nginx-example/fastcgi_params_path
+new file mode 100644
+index 0000000..7a2ec33
+--- /dev/null
++++ b/doc/nginx-example/fastcgi_params_path
+@@ -0,0 +1,20 @@
++# Emulate PATH_INFO & PATH_TRANSLATED for scripts
++# designed to work using Apache's mod_action.
++if ($request_uri ~ "^([^?]*)") {
++    set $path $1;
++}
++set $file $request_filename;
++set $test "";
++if (-d $file) {
++    set $test "${test}D";
++}
++if (-f "${file}index.html") {
++    set $test "${test}H";
++}
++if ($test = "DH") {
++    set $path "${path}index.html";
++    set $file "${file}index.html";
++}
++
++fastcgi_param	PATH_INFO	    $path;
++fastcgi_param	PATH_TRANSLATED	    $file;
+diff --git a/doc/nginx-example/mime.types b/doc/nginx-example/mime.types
+new file mode 100644
+index 0000000..857df69
+--- /dev/null
++++ b/doc/nginx-example/mime.types
+@@ -0,0 +1,107 @@
++
++types {
++    text/html                             html htm shtml;
++    text/css                              css;
++    text/xml                              xml;
++    image/gif                             gif;
++    image/jpeg                            jpeg jpg;
++    application/javascript                js;
++    application/atom+xml                  atom;
++    application/rss+xml                   rss;
++
++    text/mathml                           mml;
++    text/plain                            txt;
++    text/vnd.sun.j2me.app-descriptor      jad;
++    text/vnd.wap.wml                      wml;
++    text/x-component                      htc;
++
++    image/png                             png;
++    image/tiff                            tif tiff;
++    image/vnd.wap.wbmp                    wbmp;
++    image/x-icon                          ico;
++    image/x-jng                           jng;
++    image/x-ms-bmp                        bmp;
++    image/svg+xml                         svg svgz;
++    image/webp                            webp;
++
++    application/font-woff                 woff;
++    application/java-archive              jar war ear;
++    application/json                      json;
++    application/mac-binhex40              hqx;
++    application/msword                    doc;
++    application/pdf                       pdf;
++    application/postscript                ps eps ai;
++    application/rtf                       rtf;
++    application/vnd.apple.mpegurl         m3u8;
++    application/vnd.ms-excel              xls;
++    application/vnd.ms-fontobject         eot;
++    application/vnd.ms-powerpoint         ppt;
++    application/vnd.wap.wmlc              wmlc;
++    application/vnd.google-earth.kml+xml  kml;
++    application/vnd.google-earth.kmz      kmz;
++    application/x-7z-compressed           7z;
++    application/x-cocoa                   cco;
++    application/x-java-archive-diff       jardiff;
++    application/x-java-jnlp-file          jnlp;
++    application/x-makeself                run;
++    application/x-perl                    pl pm;
++    application/x-pilot                   prc pdb;
++    application/x-rar-compressed          rar;
++    application/x-redhat-package-manager  rpm;
++    application/x-sea                     sea;
++    application/x-shockwave-flash         swf;
++    application/x-stuffit                 sit;
++    application/x-tcl                     tcl tk;
++    application/x-x509-ca-cert            der pem crt;
++    application/x-xpinstall               xpi;
++    application/xhtml+xml                 xhtml;
++    application/xspf+xml                  xspf;
++    application/zip                       zip;
++
++    application/octet-stream              bin exe dll;
++    application/octet-stream              deb;
++    application/octet-stream              dmg;
++    application/octet-stream              iso img;
++    application/octet-stream              msi msp msm;
++
++    application/vnd.openxmlformats-officedocument.wordprocessingml.document    docx;
++    application/vnd.openxmlformats-officedocument.spreadsheetml.sheet          xlsx;
++    application/vnd.openxmlformats-officedocument.presentationml.presentation  pptx;
++
++    audio/midi                            mid midi kar;
++    audio/mpeg                            mp3;
++    audio/ogg                             ogg;
++    audio/x-m4a                           m4a;
++    audio/x-realaudio                     ra;
++
++    video/3gpp                            3gpp 3gp;
++    video/mp2t                            ts;
++    video/mp4                             mp4;
++    video/mpeg                            mpeg mpg;
++    video/quicktime                       mov;
++    video/webm                            webm;
++    video/x-flv                           flv;
++    video/x-m4v                           m4v;
++    video/x-mng                           mng;
++    video/x-ms-asf                        asx asf;
++    video/x-ms-wmv                        wmv;
++    video/x-msvideo                       avi;
++
++    application/octet-stream              safariextz;
++    application/x-chrome-extension        crx;
++    application/x-opera-extension         oex;
++    application/x-web-app-manifest+json   webapp;
++    text/cache-manifest                   manifest appcache;
++    application/x-font-ttf                ttc ttf;
++    font/opentype                         otf;
++    application/x-bittorrent              torrent;
++    application/xml                       rdf;
++    text/vtt                              vtt;
++    text/x-vcard                          vcf;
++    image/x-icon                          cur;
++    audio/mp4                             aac f4a f4b;
++    audio/ogg                             oga;
++    audio/x-wav                           wav;
++    video/mp4                             f4v f4p;
++    video/ogg                             ogv;
++}
+diff --git a/doc/nginx-example/nginx.conf b/doc/nginx-example/nginx.conf
+new file mode 100644
+index 0000000..9f36c06
+--- /dev/null
++++ b/doc/nginx-example/nginx.conf
+@@ -0,0 +1,169 @@
++# nginx Configuration File
++# http://wiki.nginx.org/Configuration
++# http://nginx.org/en/docs/dirindex.html
++
++# Run as a less privileged user for security reasons.
++user nginx nginx;
++
++# How many worker threads to run;
++# "auto" sets it to the number of CPU cores available in the system, and
++# offers the best performance. Don't set it higher than the number of CPU
++# cores if changing this parameter.
++
++# The maximum number of connections for Nginx is calculated by:
++# max_clients = worker_processes * worker_connections
++worker_processes auto;
++
++# Maximum open file descriptors per process;
++# should be > worker_connections.
++worker_rlimit_nofile 8192;
++
++events {
++	# When you need > 8000 * cpu_cores connections, you start optimizing your OS,
++	# and this is probably the point at which you hire people who are smarter than
++	# you, as this is *a lot* of requests.
++	worker_connections 8000;
++}
++
++# Required for runit.
++# It breaks zero downtime feature when nginx binary change.
++# Graceful upgrade on configuration change works: `sv hup nginx`
++daemon off;
++
++# Default error log file
++# (this is only used when you don't override error_log on a server{} level)
++# error_log file [ debug | info | notice | warn | error | crit ]
++error_log /var/log/nginx/error_log info;
++pid /var/run/nginx.pid;
++
++http {
++
++	# Hide nginx version information.
++	server_tokens off;
++
++	# Define the MIME types for files.
++	include /etc/nginx/mime.types;
++	default_type application/octet-stream;
++
++	# Format to use in log files
++	log_format main '$host $remote_addr - $remote_user [$time_local] "$request" '
++			'$status $body_bytes_sent "$http_referer" '
++			'"$http_user_agent" "$http_x_forwarded_for"';
++
++	# Default log file
++	# (this is only used when you don't override access_log on a server{} level)
++	access_log /var/log/nginx/access_log main;
++
++	# How long to allow each connection to stay idle; longer values are better
++	# for each individual client, particularly for SSL, but means that worker
++	# connections are tied up longer. (Default: 65)
++	keepalive_timeout 1h;
++
++	# Speed up file transfers by using sendfile() to copy directly
++	# between descriptors rather than using read()/write().
++	sendfile        on;
++
++	# Tell Nginx not to send out partial frames; this increases throughput
++	# since TCP frames are filled up before being sent out. (adds TCP_CORK)
++	tcp_nopush      on;
++
++	# Tell Nginx to enable the Nagle buffering algorithm for TCP packets, which
++	# collates several smaller packets together into one larger packet, thus saving
++	# bandwidth at the cost of a nearly imperceptible increase to latency. (removes TCP_NODELAY)
++# 	tcp_nodelay     off;
++
++
++	# Compression
++
++	# Enable Gzip compressed.
++	gzip on;
++
++	# Enable compression both for HTTP/1.0 and HTTP/1.1 (required for CloudFront).
++	gzip_http_version  1.0;
++
++	# Compression level (1-9).
++	# 5 is a perfect compromise between size and cpu usage, offering about
++	# 75% reduction for most ascii files (almost identical to level 9).
++	gzip_comp_level    5;
++
++	# Don't compress anything that's already small and unlikely to shrink much
++	# if at all (the default is 20 bytes, which is bad as that usually leads to
++	# larger files after gzipping).
++	gzip_min_length    256;
++
++	# Compress data even for clients that are connecting to us via proxies,
++	# identified by the "Via" header (required for CloudFront).
++	gzip_proxied       any;
++
++	# Tell proxies to cache both the gzipped and regular version of a resource
++	# whenever the client's Accept-Encoding capabilities header varies;
++	# Avoids the issue where a non-gzip capable client (which is extremely rare
++	# today) would display gibberish if their proxy gave them the gzipped version.
++	gzip_vary          on;
++
++	# Compress all output labeled with one of the following MIME-types.
++	gzip_types
++		application/atom+xml
++		application/javascript
++		application/json
++		application/rss+xml
++		application/vnd.ms-fontobject
++		application/x-font-ttf
++		application/x-web-app-manifest+json
++		application/xhtml+xml
++		application/xml
++		font/opentype
++		image/svg+xml
++		image/x-icon
++		text/css
++		text/plain
++		text/x-component;
++		# text/html is always compressed by HttpGzipModule
++
++
++	# This should be turned on if you are going to have pre-compressed copies (.gz) of
++	# static files available. If not it should be left off as it will cause extra I/O
++	# for the check. It is best if you enable this in a location{} block for
++	# a specific directory, or on an individual server{} level.
++	# gzip_static on;
++
++	# Protect against the BEAST attack by preferring RC4-SHA when using SSLv3 and TLS protocols.
++	# Note that TLSv1.1 and TLSv1.2 are immune to the beast attack but only work with OpenSSL v1.0.1 and higher and has limited client support.
++	# WARNING:
++	#   IE6/XP does not support TLS by default. Enable vulnerable SSLv3 protocol for it.
++	ssl_protocols              TLSv1 TLSv1.1 TLSv1.2;
++	#ssl_ciphers                RC4:HIGH:!aNULL:!MD5;
++	ssl_prefer_server_ciphers  on;
++
++	### Recommendation in previous paragraph (from H5BP) updated by:
++	### https://wiki.mozilla.org/Security/Server_Side_TLS
++	### https://mozilla.github.io/server-side-tls/ssl-config-generator/
++	ssl_ciphers             'ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-AES256-GCM-SHA384:DHE-RSA-AES128-GCM-SHA256:DHE-DSS-AES128-GCM-SHA256:kEDH+AESGCM:ECDHE-RSA-AES128-SHA256:ECDHE-ECDSA-AES128-SHA256:ECDHE-RSA-AES128-SHA:ECDHE-ECDSA-AES128-SHA:ECDHE-RSA-AES256-SHA384:ECDHE-ECDSA-AES256-SHA384:ECDHE-RSA-AES256-SHA:ECDHE-ECDSA-AES256-SHA:DHE-RSA-AES128-SHA256:DHE-RSA-AES128-SHA:DHE-DSS-AES128-SHA256:DHE-RSA-AES256-SHA256:DHE-DSS-AES256-SHA:DHE-RSA-AES256-SHA:ECDHE-RSA-DES-CBC3-SHA:ECDHE-ECDSA-DES-CBC3-SHA:AES128-GCM-SHA256:AES256-GCM-SHA384:AES128-SHA256:AES256-SHA256:AES128-SHA:AES256-SHA:AES:CAMELLIA:DES-CBC3-SHA:!aNULL:!eNULL:!EXPORT:!DES:!RC4:!MD5:!PSK:!aECDH:!EDH-DSS-DES-CBC3-SHA:!EDH-RSA-DES-CBC3-SHA:!KRB5-DES-CBC3-SHA';
++	# Diffie-Hellman parameter for DHE ciphersuites, recommended 2048 bits
++	# WARNING:
++	#   Java 6 does not support dhparam larger than 1024 bits.
++	#   Clients that use Java 6 won't be able to connect to your site if
++	#   you use a larger dhparam.
++	# Generate: openssl dhparam 2048 > /etc/ssl/nginx/dhparam2048.pem
++	ssl_dhparam		/etc/ssl/nginx/dhparam2048.pem;
++	# OCSP Stapling, fetch OCSP records from URL in ssl_certificate and cache them
++	ssl_stapling		on;
++	ssl_stapling_verify	on;
++	resolver		127.0.0.1;
++	# Enable this if your want HSTS (recommended, but be careful)
++	# add_header Strict-Transport-Security max-age=15768000;
++
++	# Optimize SSL by caching session parameters for 10 minutes. This cuts down on the number of expensive SSL handshakes.
++	# The handshake is the most CPU-intensive operation, and by default it is re-negotiated on every new/parallel connection.
++	# By enabling a cache (of type "shared between all Nginx workers"), we tell the client to re-use the already negotiated state.
++	# Further optimization can be achieved by raising keepalive_timeout, but that shouldn't be done unless you serve primarily HTTPS.
++	ssl_session_cache    shared:SSL:10m; # a 1mb cache can hold about 4000 sessions, so we can hold 40000 sessions
++	ssl_session_timeout  10m;
++
++	# This default SSL certificate will be served whenever the client lacks support for SNI (Server Name Indication).
++	# Make it a symlink to the most important certificate you have, so that users of IE 8 and below on WinXP can see your main site without SSL errors.
++	#ssl_certificate      /etc/nginx/default_ssl.crt;
++	#ssl_certificate_key  /etc/nginx/default_ssl.key;
++
++	include sites-enabled/*;
++}
+diff --git a/doc/nginx-example/proxy.conf b/doc/nginx-example/proxy.conf
+new file mode 100644
+index 0000000..1e15722
+--- /dev/null
++++ b/doc/nginx-example/proxy.conf
+@@ -0,0 +1,23 @@
++proxy_set_header Host $http_host;
++
++### Provide real IP and HTTPS state to backend
++
++set $_https "";
++if ($scheme = https) {
++        set $_https on;
++}
++
++#
++proxy_set_header X-Real-REMOTE_ADDR $remote_addr;
++proxy_set_header X-Real-REMOTE_PORT $remote_port;
++proxy_set_header X-Real-HTTPS $_https;
++
++# Mojolicious (expect Perl's true/false, so "" or "on" should be ok)
++proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
++proxy_set_header X-Forwarded-HTTPS $_https;
++# Mojolicious (since 4.97)
++proxy_set_header X-Forwarded-Proto $scheme;
++
++# Apache (add this to apache config/htaccess)
++#   SetEnvIf X-Forwarded-Protocol https HTTPS=on
++proxy_set_header X-Forwarded-Protocol $scheme;
+diff --git a/doc/nginx-example/proxy_ws.conf b/doc/nginx-example/proxy_ws.conf
+new file mode 100644
+index 0000000..695ad6d
+--- /dev/null
++++ b/doc/nginx-example/proxy_ws.conf
+@@ -0,0 +1,5 @@
++include proxy.conf;
++# WebSocket proxying, http://nginx.org/en/docs/http/websocket.html
++proxy_http_version 1.1;
++proxy_set_header Upgrade $http_upgrade;
++proxy_set_header Connection "upgrade";
+diff --git a/doc/nginx-example/scgi_params b/doc/nginx-example/scgi_params
+new file mode 100644
+index 0000000..47348ca
+--- /dev/null
++++ b/doc/nginx-example/scgi_params
+@@ -0,0 +1,16 @@
++
++scgi_param  REQUEST_METHOD     $request_method;
++scgi_param  REQUEST_URI        $request_uri;
++scgi_param  QUERY_STRING       $query_string;
++scgi_param  CONTENT_TYPE       $content_type;
++
++scgi_param  DOCUMENT_URI       $document_uri;
++scgi_param  DOCUMENT_ROOT      $document_root;
++scgi_param  SCGI               1;
++scgi_param  SERVER_PROTOCOL    $server_protocol;
++scgi_param  HTTPS              $https if_not_empty;
++
++scgi_param  REMOTE_ADDR        $remote_addr;
++scgi_param  REMOTE_PORT        $remote_port;
++scgi_param  SERVER_PORT        $server_port;
++scgi_param  SERVER_NAME        $server_name;
+diff --git a/doc/nginx-example/sites-available/api.example b/doc/nginx-example/sites-available/api.example
+new file mode 100644
+index 0000000..0424488
+--- /dev/null
++++ b/doc/nginx-example/sites-available/api.example
+@@ -0,0 +1,72 @@
++server {
++	listen 80;
++
++	# The host name to respond to
++	server_name api.example;
++
++# 	# redirect to the https host (declared below)
++# 	return 301 https://$server_name$request_uri;
++# }
++#
++# server {
++# 	listen api.example:443 ssl deferred;
++#
++# 	# The host name to respond to
++# 	server_name api.example;
++#
++# 	ssl_certificate         /etc/ssl/nginx/api.example.chained.crt;
++# 	ssl_certificate_key     /etc/ssl/nginx/api.example.key;
++#	ssl_stapling		off; # self-signed certificate
++
++	# Path for static files
++	root /var/www/$host;
++
++	# Allow only local access
++	include conf/directive-only/protect-local-sites.conf;
++
++	# Deny access to hidden/backup/config/source files
++	include conf/location/protect-system-files.conf;
++	location ~* \.cgi(/|$) {
++		deny all;
++	}
++
++	# Force UTF-8 for certain file formats.
++	include conf/directive-only/charset.conf;
++
++	# Allow filename.\d+.(css|js|anyimages) versioning
++	include conf/location/cache-busting.conf;
++
++	# Setup expires for static resources
++	include conf/location/expires.conf;
++	include conf/location/cross-domain-fonts.conf;
++
++	################
++	### WARNING! ###
++	################
++	# Some of included conf/* files use
++	#	location ~*
++	# As result, if you'll match same urls using
++	#	location =
++	#	location ^~
++	# you'll overwrite configuration in included files.
++	# Otherwise these urls will be handled by configuration in
++	# included files and default error_page 404.
++	# If you'll need to modify this behavior - inline content of these
++	# conf/* files instead of including them and modify it.
++
++	# - existing js/css/images/… files	    → nginx
++	#   (matched by included conf/* files)
++
++	# - default 				    → 404
++	location / {
++		return 404;
++	}
++
++	# - service: main			    → backend
++	rewrite ^/(main)$ /$1/ last;
++
++	location /main/ {
++		proxy_pass http://127.0.0.1:8800;
++		include proxy_ws.conf;
++	}
++}
+diff --git a/doc/nginx-example/sites-available/default b/doc/nginx-example/sites-available/default
+new file mode 100644
+index 0000000..05f5d75
+--- /dev/null
++++ b/doc/nginx-example/sites-available/default
+@@ -0,0 +1,63 @@
++# www to non-www redirect -- duplicate content is BAD:
++# https://github.com/h5bp/html5-boilerplate/blob/5370479476dceae7cc3ea105946536d6bc0ee468/.htaccess#L362
++# Choose between www and non-www, listen on the *wrong* one and redirect to
++# the right one -- http://wiki.nginx.org/Pitfalls#Server_Name
++server {
++	# don't forget to tell on which port this server listens
++	listen 80;
++
++	# listen on the www host
++	server_name ~^www\.(.*)$;
++
++	# and redirect to the non-www host (declared below)
++	return 301 $scheme://$1$request_uri;
++}
++
++server {
++	listen 80 default_server deferred;
++
++	# The host name to respond to
++	server_name _;
++
++	# Path for static files
++	root /var/www/$host;
++
++	# Allow only local access
++	include conf/directive-only/protect-local-sites.conf;
++
++	# Deny access to hidden/backup/config/source files
++	include conf/location/protect-system-files.conf;
++
++	# Force UTF-8 for certain file formats.
++	include conf/directive-only/charset.conf;
++
++	# Allow filename.\d+.(css|js|anyimages) versioning
++	include conf/location/cache-busting.conf;
++
++	# Setup expires for static resources
++	include conf/location/expires.conf;
++	include conf/location/cross-domain-fonts.conf;
++
++	################
++	### WARNING! ###
++	################
++	# Some of included conf/* files use
++	#	location ~*
++	# As result, if you'll match same urls using
++	#	location =
++	#	location ^~
++	# you'll overwrite configuration in included files.
++	# Otherwise these urls will be handled by configuration in
++	# included files and default error_page 404.
++	# If you'll need to modify this behavior - inline content of these
++	# conf/* files instead of including them and modify it.
++
++	location / {
++		return 404;
++	}
++	error_page 404 = @backend;
++	location @backend {
++		proxy_pass http://127.0.0.1:81;
++		include proxy.conf;
++	}
++}
+diff --git a/doc/nginx-example/sites-available/no-default b/doc/nginx-example/sites-available/no-default
+new file mode 100644
+index 0000000..68cb8fa
+--- /dev/null
++++ b/doc/nginx-example/sites-available/no-default
+@@ -0,0 +1,11 @@
++# Drop requests for unknown hosts
++#
++# If no default server is defined, nginx will use the first found server.
++# To prevent host header attacks, or other potential problems when an unknown
++# servername is used in a request, it's recommended to drop the request
++# returning 444 "no response".
++
++server {
++  listen 80 default_server;
++  return 444;
++}
+diff --git a/doc/nginx-example/sites-enabled/api.example b/doc/nginx-example/sites-enabled/api.example
+new file mode 120000
+index 0000000..834a6c2
+--- /dev/null
++++ b/doc/nginx-example/sites-enabled/api.example
+@@ -0,0 +1 @@
++../sites-available/api.example
+\ No newline at end of file
+diff --git a/doc/nginx-example/sites-enabled/default b/doc/nginx-example/sites-enabled/default
+new file mode 120000
+index 0000000..6d9ba33
+--- /dev/null
++++ b/doc/nginx-example/sites-enabled/default
+@@ -0,0 +1 @@
++../sites-available/default
+\ No newline at end of file
+diff --git a/doc/nginx-example/uwsgi_params b/doc/nginx-example/uwsgi_params
+new file mode 100644
+index 0000000..f539451
+--- /dev/null
++++ b/doc/nginx-example/uwsgi_params
+@@ -0,0 +1,16 @@
++
++uwsgi_param  QUERY_STRING       $query_string;
++uwsgi_param  REQUEST_METHOD     $request_method;
++uwsgi_param  CONTENT_TYPE       $content_type;
++uwsgi_param  CONTENT_LENGTH     $content_length;
++
++uwsgi_param  REQUEST_URI        $request_uri;
++uwsgi_param  PATH_INFO          $document_uri;
++uwsgi_param  DOCUMENT_ROOT      $document_root;
++uwsgi_param  SERVER_PROTOCOL    $server_protocol;
++uwsgi_param  HTTPS              $https if_not_empty;
++
++uwsgi_param  REMOTE_ADDR        $remote_addr;
++uwsgi_param  REMOTE_PORT        $remote_port;
++uwsgi_param  SERVER_PORT        $server_port;
++uwsgi_param  SERVER_NAME        $server_name;
+diff --git a/service/log/log/run b/service/log/log/run
+new file mode 100755
+index 0000000..a5ed3e0
+--- /dev/null
++++ b/service/log/log/run
+@@ -0,0 +1,2 @@
++#!/bin/sh
++exec svlogd -tt $(find ../../../var/log -type d) 2>&1
+diff --git a/service/log/run b/service/log/run
+new file mode 100755
+index 0000000..e24c273
+--- /dev/null
++++ b/service/log/run
+@@ -0,0 +1,2 @@
++#!/bin/sh
++exec socklog unix ../../var/log.sock 2>&1
+diff --git a/service/main/finish b/service/main/finish
+new file mode 100755
+index 0000000..87fc4be
+--- /dev/null
++++ b/service/main/finish
+@@ -0,0 +1,4 @@
++#!/bin/sh
++cd ../..
++exec </dev/null 2>&1
++echo finished
+diff --git a/service/main/log/run b/service/main/log/run
+new file mode 100755
+index 0000000..fae6779
+--- /dev/null
++++ b/service/main/log/run
+@@ -0,0 +1,3 @@
++#!/bin/sh
++svcname=$(basename $(cd .. && pwd))
++exec logger -d -u ../../../var/log.sock -t ${svcname}[0] -p user.warn
+diff --git a/service/main/run b/service/main/run
+new file mode 100755
+index 0000000..9bb6c28
+--- /dev/null
++++ b/service/main/run
+@@ -0,0 +1,6 @@
++#!/bin/sh
++svcname=$(basename $(pwd))
++cd ../..
++exec </dev/null 2>&1
++echo started
++exec ./bin/${svcname}
+diff --git a/sql/000_create_basic_tables.sql b/sql/000_create_basic_tables.sql
+new file mode 100644
+index 0000000..98126a3
+--- /dev/null
++++ b/sql/000_create_basic_tables.sql
+@@ -0,0 +1,36 @@
++CREATE TABLE Planning (
++  PRIMARY KEY (id),
++  id	            BIGINT                 NOT NULL AUTO_INCREMENT,
++  user_id		    BIGINT                 NOT NULL,
++  status            ENUM("OPEN","CLOSED")  NOT NULL,
++  project_id        INT                    NOT NULL,
++  tracker_id        INT                    NOT NULL,
++  issue_id          INT		               NOT NULL,
++  issue_title       VARCHAR(255)           NOT NULL,
++  issue_url         VARCHAR(255)           NOT NULL,
++  activity_id       INT                    NOT NULL,
++  spent_online      INT                    NOT NULL,
++  spent_offline     INT                    NOT NULL,
++  reported          INT                    NOT NULL,
++  created_at        BIGINT                 NOT NULL
++);
++
++CREATE TABLE PlannedTime (
++  PRIMARY KEY (id),
++  id	            BIGINT        NOT NULL AUTO_INCREMENT,
++  planning_id       BIGINT        NOT NULL,
++  estimation        INT           NOT NULL,
++  reason            VARCHAR(255)  NOT NULL,
++  created_at        BIGINT        NOT NULL,
++  FOREIGN KEY (planning_id) REFERENCES Planning(id)
++);
++
++CREATE TABLE SpentTimeHistory (
++  PRIMARY KEY (planning_id, started_at, status),
++  planning_id       BIGINT                   NOT NULL,
++  spent             INT                      NOT NULL,
++  started_at        BIGINT                   NOT NULL,
++  ended_at          BIGINT                   NOT NULL,
++  status            ENUM("ONLINE","OFFLINE") NOT NULL,
++  FOREIGN KEY (planning_id) REFERENCES Planning(id)
++);
+diff --git a/sql/000_drop_basic_tables.sql b/sql/000_drop_basic_tables.sql
+new file mode 100644
+index 0000000..682df2e
+--- /dev/null
++++ b/sql/000_drop_basic_tables.sql
+@@ -0,0 +1,3 @@
++DROP TABLE PlannedTime;
++DROP TABLE SpentTimeHistory;
++DROP TABLE Planning;
+diff --git a/sql/001_add_duedate_estim_columns.sql b/sql/001_add_duedate_estim_columns.sql
+new file mode 100644
+index 0000000..c8488c5
+--- /dev/null
++++ b/sql/001_add_duedate_estim_columns.sql
+@@ -0,0 +1,5 @@
++ALTER TABLE Planning
++  ADD issue_estim INT NOT NULL DEFAULT 0;
++  
++ALTER TABLE Planning
++  ADD issue_due_date BIGINT NOT NULL DEFAULT 0;
+diff --git a/sql/001_remove_duedate_estim_columns.sql b/sql/001_remove_duedate_estim_columns.sql
+new file mode 100644
+index 0000000..eceee80
+--- /dev/null
++++ b/sql/001_remove_duedate_estim_columns.sql
+@@ -0,0 +1,5 @@
++ALTER TABLE Planning
++ DROP issue_estim;
++  
++ALTER TABLE Planning
++ DROP issue_due_date;
+diff --git a/sql/002_add_issue_done.sql b/sql/002_add_issue_done.sql
+new file mode 100644
+index 0000000..5b18c0a
+--- /dev/null
++++ b/sql/002_add_issue_done.sql
+@@ -0,0 +1,3 @@
++ALTER TABLE Planning
++  ADD issue_done INT NOT NULL;
++
+diff --git a/sql/002_remove_issue_done.sql b/sql/002_remove_issue_done.sql
+new file mode 100644
+index 0000000..31d9ceb
+--- /dev/null
++++ b/sql/002_remove_issue_done.sql
+@@ -0,0 +1,3 @@
++ALTER TABLE Planning
++ DROP issue_done;
++
