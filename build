@@ -1,0 +1,69 @@
+#!/usr/bin/env bash
+
+# Default settings.
+RUN_TESTS=
+
+main() {
+	parse_params "$@"
+	generate_VERSION
+	build_project || exit 1
+	test -z "$RUN_TESTS" || test_project
+}
+
+parse_params() {
+	while test $# -ge 1; do
+		if test "$1" = "--help" || test "$1" = "-h"; then
+			echo "Usage: $0 [-h|--help] [-t|--test]"
+			exit
+		fi
+		if test "$1" = "--test" || test "$1" = "-t"; then
+			shift
+			RUN_TESTS=1
+			continue
+		fi
+		echo "error: unknown param '$1'" >&2
+		exit 1
+	done
+}
+
+build_project() {
+	#... PUT BUILD INSTRUCTION FOR YOUR PROJECT HERE ...
+	local p
+	for p in $(find bin/ -type f -printf "%f\n"); do
+		test -d "cmd/$p" || rm -f "bin/$p"
+	done
+	GOBIN=$(pwd)/bin/ go install -v ./... || return 1
+}
+
+test_project() {
+	#... PUT TEST INSTRUCTION FOR YOUR PROJECT HERE ...
+	prove -r t/build/ || return 1
+	go test -cover ./... || return 1
+	if test -n "$RELEASE_TESTING"; then
+		go test -race ./... || return 1
+	fi
+}
+
+generate_VERSION() {
+	local dirty="dirty-$(date +%s)"
+	local v=$(git describe --exact-match --tags --match "[0-9]*" --dirty="+${dirty}" 2>/dev/null)
+	if test -z "$v"; then
+		v=$(grep '^VERSION' migrate | sed 's/^VERSION\s\+\(\S\+\)\s*$/\1/' | tail -n 1)
+		local sha1=$(git rev-parse --short HEAD)
+		local branch=$(git rev-parse --abbrev-ref HEAD)
+		if test "$branch" = "HEAD" || test "$branch" = "master"; then
+			v="${v}+${sha1}"
+		else
+			branch=$(echo "$branch" | sed 's/[^0-9A-Za-z-]\+/./g')
+			v="${v}+${branch}.${sha1}"
+		fi
+		git update-index -q --refresh --unmerged >/dev/null
+		if ! git diff-index --quiet HEAD; then
+			v="${v}.${dirty}"
+		fi
+	fi
+	echo "$v" > VERSION
+}
+
+
+main "$@"

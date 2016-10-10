@@ -1,0 +1,26 @@
+Narada plugin: runit
+====================
+
+This project was created using https://github.com/powerman/narada-plugin-runit
+(plugin for template for new projects designed for Narada framework).
+
+This document describe how to use files provided by this plugin.
+
+
+== Dependencies
+
+You should have http://smarden.org/runit/[runit] installed (either
+system-wide or in your home directory with binaries available in `$PATH`).
+
+
+== Usage
+
+Just create `./service/` directory with subdirectories for each service,
+and put there executable `run` and (optional) `log/run` files for these
+services. All services will be automatically started, and you can then
+control them using `sv <COMMAND> ./service/<SERVICE>` in project's root
+directory. For more documentation see runit website or man pages for
+sv(8), runsv(8) and runsvdir(8).
+
+You can see example of such service in
+https://github.com/powerman/narada-plugin-socklog/tree/master[narada-plugin-socklog].

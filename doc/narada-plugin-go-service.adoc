@@ -1,0 +1,62 @@
+Narada plugin: Go service
+=========================
+
+This project was created using https://github.com/powerman/narada-plugin-go-service
+(plugin for template for new projects designed for Narada framework).
+
+This document describe how to use files provided by this plugin.
+
+
+== Dependencies
+
+Require https://github.com/powerman/narada-plugin-runit[Narada plugin
+runit].
+
+Require https://github.com/powerman/narada-plugin-socklog[Narada plugin
+socklog].
+
+Probably easiest way to get both plugins and also build scripts for Go
+projects is start your project using
+https://github.com/powerman/narada-base/tree/go-socklog[go-socklog branch]
+of https://github.com/powerman/narada-base[narada-base].
+
+
+== Usage
+
+It also may be very convenient to automate restart of main service on each
+release. For example, if you're using narada-base's `./release` script then you
+can modify it this way:
+
+[source,diff]
+----
+ release_version() {
+         list_versions "$2" | grep -q -x -F "$1" && return 0
++        echo -ne "\nrestart main\n" >> "$2"
+         echo -ne "\nINSTALL $1\nVERSION $1\n\n" >> "$2"
+ }
+----
+
+
+== Setup
+
+After new deploy you'll need to configure at least these:
+
+- `config/listen`
+
+If this project will be attached to some path on website instead of full
+website, you'll need to setup this path too. For example, if this project will
+be attached to http://site/app/, then:
+
+[source,sh]
+----
+echo /app > config/basepath
+----
+
+If this project will be installed behind some front-end web server like
+nginx and will need to know real user's IP provided by front-end web
+server in some HTTP header then set name of that header:
+
+[source,sh]
+----
+echo X-Real-REMOTE_ADDR > config/real_ip_header
+----

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+test "$1" = '-n' && shift || RUN_TESTS=1
+
+VERSION=${1:-$(< VERSION)}
+
+#... PUT DEPLOY INSTRUCTION FOR YOUR PROJECT HERE ...
+find .release -type f -name '*+*' \
+	-not -name "$(cat VERSION).*" \
+	-not -name "$(cat _live/VERSION 2>/dev/null).*" \
+	-delete
+mkdir -p _live &&
+ln -sf ../.release _live/ &&
+cd _live &&
+narada-install --allow-downgrade --allow-restore "$VERSION" &&
+if test -n "$RUN_TESTS" -a -d t/devel; then
+	prove -r t/devel/
+fi &&
+if test -n "$RUN_TESTS" -a -d bin; then
+	prove -r bin/
+fi &&
+rm -f .backup/*+*

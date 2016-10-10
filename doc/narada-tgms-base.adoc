@@ -1,0 +1,65 @@
+= Narada tgms base
+
+This project based on https://github.com/powerman/narada-base/tree/go-socklog and https://github.com/powerman/narada-plugin-go-service
+
+== Additions/changes to base projects
+
+=== ./migrate
+
+.Add configuration files:
+
+* http/listen (default: 127.0.0.1:0)
+* http/basepath
+* http/real_ip_header
+* lock_timeout (default: 1s, for narada shared lock)
+* rsa_public_key (for JWT verification)
+
+
+=== ./release
+
+* Add application restart to migrate file on releases
+* major/minor/patch releases possible only in master tree
+
+=== ./deploy_server
+
+Changed according to our deployment process and requires additional env variables:
+
+* DEPLOY_ADDR - for ssh connection
+* DEPLOY_PATH - folder name for application 
+* KEYPATH - path to ssh key (optional)
+
+=== ./deploy_prod
+ 
+Like deploy_server, but requires version as argument
+
+=== ./staging-mysql.setup
+
+Example of staging.setup for testing mysql related packages +
+It prepares database, make dump to recreate it in tests. But you need to add your sql migration scripts +
+Requires https://gitlab.qarea.org/tgms/testdb to be installed, setuped and used in tests + 
+Depends on ./staging.setup script +
+Could be symlinked with "ln -s" from "testdata" folder of needed package
+
+=== ./staging-mysql.teardown
+
+Example of staging.teardown for testing musql related packages +
+Cleans mysql with "narada-mysql-setup --clean" after testing + 
+Could be symlinked with "ln -s" from "testdata" folder of needed package
+
+=== Packages
+
+==== cfg
+
+.Extended with:
+* HTTP related values (listen, real_ip_header, basepath) moved under config/http folder
+* MySQL configuration variables
+* RSAPublicKey variable for JWT verification
+* LockTimeout variable for narada shared lock (default: 1s)
+
+==== mysqldb
+
+Package to create database connection with sqlx library
+
+==== rpcsvc
+
+Change RPC struct name to API as we used in all our services

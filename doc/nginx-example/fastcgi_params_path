@@ -1,0 +1,20 @@
+# Emulate PATH_INFO & PATH_TRANSLATED for scripts
+# designed to work using Apache's mod_action.
+if ($request_uri ~ "^([^?]*)") {
+    set $path $1;
+}
+set $file $request_filename;
+set $test "";
+if (-d $file) {
+    set $test "${test}D";
+}
+if (-f "${file}index.html") {
+    set $test "${test}H";
+}
+if ($test = "DH") {
+    set $path "${path}index.html";
+    set $file "${file}index.html";
+}
+
+fastcgi_param	PATH_INFO	    $path;
+fastcgi_param	PATH_TRANSLATED	    $file;

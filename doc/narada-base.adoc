@@ -1,0 +1,213 @@
+Narada base
+===========
+
+This project was created using https://github.com/powerman/narada-base
+(template for new projects designed for Narada framework).
+
+This document describe how to use files provided by this template.
+
+
+== Setup
+
+=== ./build [-h|--help] [-t|--test]
+
+You usually should edit it to set commands used to build and test your
+project.
+
+Default implementation will compile and install Go commands into `bin/`.
+
+Also you may need to change commands used to run build-time tests if your
+project doesn't use http://testanything.org/[TAP]-compatible tests in
+`t/**/*.t` and/or `bin/*.t` files.
+
+Run with `-t|--test` to enable build-time tests.
+
+=== ./release [-h|--help|-n|--major|--minor|--patch|<version>]
+
+You usually should edit it to set commands needed to release your project.
+
+Default implementation will generate patch file with differences since
+previous released version for all files in your project repo (except
+files listed in `.releaseignore`) and tgz file with compiled binaries
+(`bin/*`).
+
+Generated files will be saved into `.release/` subdirectory. You can
+remove files you don't need anymore. You can re-generate files for any
+commit by running `git checkout <commit>; ./release`.
+
+NOTE: Re-generated files may differ from original ones, for ex. in case
+different compiler was used or build date was embedded in generated files
+or generated files was manually changed (this may happens in advanced
+cases when you join two branches of project).
+
+Run with `-n` to disable build-time tests.
+
+=== ./deploy [-n] [<version>]
+
+You usually should edit it to set commands needed to deploy your project.
+
+Default implementation will deploy your project into `_live/` subdirectory
+and suitable only for local testing while development.
+
+Also you may need to change commands used to run tests after deploy if
+your project doesn't use http://testanything.org/[TAP]-compatible tests in
+`t/**/*.t` files.
+
+Run with `-n` to disable deploy-time tests.
+
+=== ./deploy_server [<version>]
+
+You should edit it to set `addr` (SSH account on remote server) and `path`
+(project's directory on remove server) variables.
+
+Default implementation will upload and install/upgrade project on remote
+server using ssh.
+
+=== migrate
+
+Before you'll `./release` first version you can edit it to change files
+which will be created in directory where you deploy your project by first
+release (this isn't required, you always can change them later in next
+releases). Here is some changes you may like to do:
+
+- `config/mysql/` and `var/mysql/`: you may like to remove it if your
+  project doesn't use MySQL
+- `config/qmail/` and `var/qmail/`: you may like to remove it if your
+  project doesn't use `~/.qmail*` to handle incoming emails
+- `config/crontab/backup`:
+  * make sure default backup schedule (daily incremental backups, new full
+    backup every week) is suitable for you or change it
+  * replace `echo Reminder: ...` with real command used to (recommended)
+    encrypt or compress and upload your backup somewhere, for example:
++
+[source,sh]
+----
+narada-backup &&
+rm -f var/backup/full.tar.gpg &&
+gpg --s2k-count 1000000 --batch --cipher-algo AES256 -c \
+    --passphrase-file config/backup/pass var/backup/full.tar &&
+scp var/backup/full.tar.gpg USER@HOST:PATH/`date +"%Y%m%d-%H%M%S"`.full.gpg
+----
+
+
+== Usage
+
+While developing new version of your project you should add any extra
+upgrade/downgrade operations needed to migrate between previous and new
+versions into `migrate` file. Default operations like copying binary files
+or patching text files will be automatically added into `migrate` when
+you'll run `./release`, but there are may be some extra operations which
+you'll have to add manually, like:
+
+- create/modify/remove config/data files or directories in project's
+  deploy directory
+- change database scheme
+- convert data in database
+- restart background processes/services affected by these changes
+
+NOTE: When you're doing `git merge` or `git cherry-pick` you usually
+should not modify part of `migrate` files which was already included in
+previous releases - you can make changes only after latest `VERSION` line.
+This restriction doesn't apply to `git rebase` or in case when you're
+fixing wrong downgrade operations for already released version.
+
+You can run `./build` or `./build --test` at any time just to make sure
+your project builds ok and pass build-time tests.
+
+You can run `./release && ./deploy` at any time (even when you've not
+committed yet changes in work directory) to release and deploy into
+`_live/` current project to check how it works before committing changes
+into repository.
+
+When you're ready to release current HEAD and tag it as new version you
+should run `./release --major|--minor|--patch|<version>`.
+
+To deploy one of already released versions into `_live/` you can run
+`./deploy [<version>]`.
+
+To deploy some version on remote server copy `.release/*` files related to
+that version into `.release/` subdirectory of project's deploy directory
+on server and then run `narada-install <version>` in project's deploy
+directory on server. If you're using SSH to access your server then you
+can just run `./deploy_server [<version>]`.
+
+If you'll add TAP-compatible tests into `t/build/` then they'll be
+automatically executed by `./build --test` in work directory. If you'll
+add TAP-compatible tests into `t/devel/` then they'll be automatically
+executed by `./deploy` in deploy (`_live/`) directory.
+
+
+== Advanced usage
+
+=== Joining multiple upgrades into one
+
+If you've released 50 versions from 1.0.0 to 1.50.0 then it may took to
+much time to deploy your project on new server because `narada-install`
+doing this step by step, version by version… plus generate 49 useless
+backups. In this case you would like to prepare alternative release for
+version 1.50.0 which you'll be able to deploy on new server in single
+step. Here is how to do this (the `<from>` is 1.0.0 and `<to>` is 1.50.0
+for this example):
+
+----
+git checkout <to>
+git reset --soft <from>
+----
+
+Next, modify `migrate` file by removing all `INSTALL` and `VERSION ...` lines after
+`VERSION <from>` (do not remove this one). You also may need other changes
+to make sure all migrate operations after that line will correctly migrate
+between `<from>` and `<to>`. Then:
+
+----
+git add migrate
+git commit -m 'combined upgrade <from>-<to>'
+./release <from>-<to>
+echo -ne 'VERSION <to>\n\n' >> .release/<from>-<to>.migrate
+echo -ne 'VERSION <to>\n\n' >> migrate
+----
+
+TODO Few more actions are needed to complete this (modified migrate files
+should be added to the repo into the last commit, this modified commit
+should be re-tagged and force-pushed to origin repo).
+
+=== Merging different project versions
+
+If you've stable project branch with versions 1.x and unstable branch with
+versions 2.x, and you wanna provide upgrade path from version 1.50.0 to
+version 2.8.0, then you'll need to prepare alternative release for version
+2.8.0 (existing one will upgrade from 2.7.0). Here is how to do this (the
+`<from>` is 1.50.0 and `<to>` is 2.8.0 for this example):
+
+----
+git checkout <from>
+git merge <to>
+----
+
+Next, resolve conflict on `migrate` file: it must be same as it was in
+`<from>` with appended operations needed to migrate between `<from>` and
+`<to>`.
+
+Chances are this won't be ease, you may need to develop new tools for data
+migrations, and as result contents of deploy directory may not match
+original `<to>` version. In this case you'll have to release intermediate
+version first:
+
+----
+git add .
+git commit -m 'merge upgrade <from>-<to>-pre'
+./release <from>-<to>-pre
+----
+
+Then act similar to "Joining multiple upgrades into one" case but keep
+current `migrate`:
+
+----
+git checkout <to>
+git reset --soft <from>-<to>-pre
+git checkout <from>-<to>-pre migrate
+git add migrate
+git commit -m 'merge upgrade <from>-<to>'
+./release <from>-<to>
+echo -ne 'VERSION <to>\n\n' >> .release/<from>-<to>.migrate
+----

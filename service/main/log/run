@@ -1,0 +1,3 @@
+#!/bin/sh
+svcname=$(basename $(cd .. && pwd))
+exec logger -d -u ../../../var/log.sock -t ${svcname}[0] -p user.warn

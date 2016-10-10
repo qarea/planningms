@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+warn()	{ echo "$@" >&2;	}
+die()	{ warn "$@"; exit 1;	}
+
+main() {
+	local addr=$DEPLOY_ADDR
+	local path=$DEPLOY_PATH
+	echo "Deploy addr '$addr'"
+	echo "Deploy path '$path'"
+	local v="${1:-$(< VERSION)}"
+	list_versions | grep -q -x -F "$v"      || die "Version '$v' is not released yet"
+
+	if [ -n "$KEYPATH" ]; then
+		rsync -avzR --size-only -e "ssh -i $KEYPATH" $(git ls-files .release/) "${addr}:${path}" &&
+		ssh -o RequestTTY=yes -i $KEYPATH "$addr" bash -l -c \' "set -x; cd '$path' && narada-install '$v'" \'
+	else
+		rsync -avzR --size-only $(git ls-files .release/) "${addr}:${path}" &&
+		ssh -o RequestTTY=yes "$addr" bash -l -c \' "set -x; cd '$path' && narada-install '$v'" \'
+	fi
+	}
+list_versions() {
+	grep '^VERSION' migrate | sed 's/^VERSION\s\+\(\S\+\)\s*$/\1/'
+}
+
+main "$@"

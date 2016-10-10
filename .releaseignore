@@ -1,0 +1,24 @@
+# VCS
+[.]gitignore
+[.]travis.yml
+circle.yml
+
+# Narada
+(.*/)?[.]release/.*
+.releaseignore
+build
+release
+deploy
+deploy_server
+deploy_staging
+deploy_production
+deploy_prod
+migrate
+t/build/.*
+staging-mysql.setup
+staging-mysql.teardown
+(.*/)?staging.setup
+(.*/)?staging.teardown
+
+# Go sources
+.*[.]go

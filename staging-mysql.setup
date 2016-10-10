@@ -1,0 +1,29 @@
+#!/bin/bash
+# Default setup for Narada staging with mysql.
+# Use by symlinking ln -s ../../staging-mysql.setup staging.setup to testdata dir in test package
+#
+# In case if test is being run not from 1st level child directory, define ROOTPATH var
+# containing correct path to project root w/o trailing /. Then source this file from testdata/staging.setup
+# E.g. for 2nd level directory use:
+#
+# ROOTPATH="$1/../.."
+# source "$ROOTPATH/staging-mysql.setup"
+#
+
+if [[ -z "$ROOTPATH" ]]; then
+    ROOTPATH="$1/.."
+fi
+
+source "$ROOTPATH/staging.setup"
+
+testdb-creds
+
+narada-setup-mysql
+
+# Put your migration scripts here
+##narada-mysql < "$ROOTPATH/.release/sql/000_script1.sql"
+##narada-mysql < "$ROOTPATH/.release/sql/001_script2.sql"
+
+narada-mysqldump
+
+narada-setup-mysql --clean

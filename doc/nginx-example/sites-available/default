@@ -1,0 +1,63 @@
+# www to non-www redirect -- duplicate content is BAD:
+# https://github.com/h5bp/html5-boilerplate/blob/5370479476dceae7cc3ea105946536d6bc0ee468/.htaccess#L362
+# Choose between www and non-www, listen on the *wrong* one and redirect to
+# the right one -- http://wiki.nginx.org/Pitfalls#Server_Name
+server {
+	# don't forget to tell on which port this server listens
+	listen 80;
+
+	# listen on the www host
+	server_name ~^www\.(.*)$;
+
+	# and redirect to the non-www host (declared below)
+	return 301 $scheme://$1$request_uri;
+}
+
+server {
+	listen 80 default_server deferred;
+
+	# The host name to respond to
+	server_name _;
+
+	# Path for static files
+	root /var/www/$host;
+
+	# Allow only local access
+	include conf/directive-only/protect-local-sites.conf;
+
+	# Deny access to hidden/backup/config/source files
+	include conf/location/protect-system-files.conf;
+
+	# Force UTF-8 for certain file formats.
+	include conf/directive-only/charset.conf;
+
+	# Allow filename.\d+.(css|js|anyimages) versioning
+	include conf/location/cache-busting.conf;
+
+	# Setup expires for static resources
+	include conf/location/expires.conf;
+	include conf/location/cross-domain-fonts.conf;
+
+	################
+	### WARNING! ###
+	################
+	# Some of included conf/* files use
+	#	location ~*
+	# As result, if you'll match same urls using
+	#	location =
+	#	location ^~
+	# you'll overwrite configuration in included files.
+	# Otherwise these urls will be handled by configuration in
+	# included files and default error_page 404.
+	# If you'll need to modify this behavior - inline content of these
+	# conf/* files instead of including them and modify it.
+
+	location / {
+		return 404;
+	}
+	error_page 404 = @backend;
+	location @backend {
+		proxy_pass http://127.0.0.1:81;
+		include proxy.conf;
+	}
+}

@@ -1,0 +1,6 @@
+#!/bin/sh
+svcname=$(basename $(pwd))
+cd ../..
+exec </dev/null 2>&1
+echo started
+exec ./bin/${svcname}

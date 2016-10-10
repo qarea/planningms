@@ -1,0 +1,72 @@
+server {
+	listen 80;
+
+	# The host name to respond to
+	server_name api.example;
+
+# 	# redirect to the https host (declared below)
+# 	return 301 https://$server_name$request_uri;
+# }
+#
+# server {
+# 	listen api.example:443 ssl deferred;
+#
+# 	# The host name to respond to
+# 	server_name api.example;
+#
+# 	ssl_certificate         /etc/ssl/nginx/api.example.chained.crt;
+# 	ssl_certificate_key     /etc/ssl/nginx/api.example.key;
+#	ssl_stapling		off; # self-signed certificate
+
+	# Path for static files
+	root /var/www/$host;
+
+	# Allow only local access
+	include conf/directive-only/protect-local-sites.conf;
+
+	# Deny access to hidden/backup/config/source files
+	include conf/location/protect-system-files.conf;
+	location ~* \.cgi(/|$) {
+		deny all;
+	}
+
+	# Force UTF-8 for certain file formats.
+	include conf/directive-only/charset.conf;
+
+	# Allow filename.\d+.(css|js|anyimages) versioning
+	include conf/location/cache-busting.conf;
+
+	# Setup expires for static resources
+	include conf/location/expires.conf;
+	include conf/location/cross-domain-fonts.conf;
+
+	################
+	### WARNING! ###
+	################
+	# Some of included conf/* files use
+	#	location ~*
+	# As result, if you'll match same urls using
+	#	location =
+	#	location ^~
+	# you'll overwrite configuration in included files.
+	# Otherwise these urls will be handled by configuration in
+	# included files and default error_page 404.
+	# If you'll need to modify this behavior - inline content of these
+	# conf/* files instead of including them and modify it.
+
+	# - existing js/css/images/… files	    → nginx
+	#   (matched by included conf/* files)
+
+	# - default 				    → 404
+	location / {
+		return 404;
+	}
+
+	# - service: main			    → backend
+	rewrite ^/(main)$ /$1/ last;
+
+	location /main/ {
+		proxy_pass http://127.0.0.1:8800;
+		include proxy_ws.conf;
+	}
+}
