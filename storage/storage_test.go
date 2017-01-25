@@ -83,7 +83,7 @@ func TestOpenedPlannings(t *testing.T) {
 	}
 }
 
-func TestAddSpentSpentTimeInvalidStatus(t *testing.T) {
+func TestAddSpentSpentTimeInvalidStatusDBErr(t *testing.T) {
 	defer prepareDB()()
 	db := mysqldb.New()
 	uid := ctxtg.UserID(rand.Int63())
@@ -384,6 +384,43 @@ func TestAddExtraTimeInvalidPlanningID(t *testing.T) {
 	err = db.Get(&plannedTime, `SELECT * FROM PlannedTime`)
 	if err != sql.ErrNoRows {
 		t.Error("Should be empty")
+	}
+}
+
+func TestAddSpentSpentTimeInvalidStatus(t *testing.T) {
+	err := addSpentTimeToPlanning(nil, entities.SpentTimeHistory{
+		Status: entities.SpentTimeStatus("invalid status"),
+	})
+	if err == nil {
+		t.Error("Error expected")
+	}
+}
+
+func TestAddExtraTimeNowFunc(t *testing.T) {
+	defer prepareDB()()
+	db := mysqldb.New()
+
+	pt := randPlannedTime()
+	st := NewPlanningStorage(db, second)
+	p := randPlanning()
+	id, err := savePlanning(db, p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	before := time.Now().Unix()
+	pt.PlanningID = id
+	err = st.AddExtraTime(ctx, p.UserID, pt)
+	if err != nil {
+		t.Error("Unexpected error", err)
+	}
+	after := time.Now().Unix()
+	var planned entities.PlannedTime
+	err = sqlx.Get(db, &planned, `SELECT * FROM PlannedTime`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if planned.CreatedAt < before || planned.CreatedAt > after {
+		t.Error("Invalid created at", planned.CreatedAt)
 	}
 }
 
