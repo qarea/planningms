@@ -34,6 +34,21 @@ before_install:
   - cpanm -nq CPAN::Meta
   - cpanm -nq File::Spec
   - cpanm -nq Narada
+  - go get -v github.com/axw/gocov/gocov
+  - go get -v github.com/mattn/goveralls
+  - go get -v golang.org/x/tools/cmd/cover
+script:
+  - ./release -f
+  - mkdir _live/ && ln -s ../.release _live/.release && cd _live/
+  - narada-install "$(cat ../VERSION)" </dev/null
+  - narada-start-services & sleep 1
+  - prove -r t/devel/
+  - export PATH="$HOME/perl5/bin:$HOME/runit:$PATH"
+  - curl -L https://cpanmin.us | perl - App::cpanminus
+  - cpanm --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
+  - cpanm -nq CPAN::Meta
+  - cpanm -nq File::Spec
+  - cpanm -nq Narada
   - go get -v github.com/mattn/goveralls
   - go get -v golang.org/x/tools/cmd/cover
   - go get -v github.com/go-playground/overalls
