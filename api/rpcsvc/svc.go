@@ -6,10 +6,11 @@ import (
 	"net/http"
 	"net/rpc"
 
+	"github.com/powerman/must"
 	"github.com/powerman/narada-go/narada"
 	"github.com/qarea/ctxtg"
+	"github.com/qarea/planningms/cfg"
 	"github.com/qarea/planningms/entities"
-	"github.com/qarea/redminems/cfg"
 
 	"github.com/pkg/errors"
 
@@ -20,9 +21,7 @@ var log = narada.NewLog("rpcsvc: ")
 
 // Init setups and registers JSON-RPC handlers
 func Init(c RPCConfig) {
-	if err := rpc.Register(newPlanningServiceRPC(c)); err != nil {
-		log.Panic(err)
-	}
+	must.AbortIf(rpc.Register(newPlanningServiceRPC(c)))
 	http.Handle(cfg.HTTP.BasePath+"/rpc", jsonrpc2.HTTPHandler(nil))
 }
 

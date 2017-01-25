@@ -227,15 +227,6 @@ func ifPlanningID(planningID entities.PlanningID, f spentTimeFunc) spentTimeFunc
 	}
 }
 
-func checkPlanningID(planningID entities.PlanningID, f spentTimeFunc) spentTimeFunc {
-	return func(st entities.SpentTime) (*entities.SpentTime, error) {
-		if st.PlanningID != planningID {
-			return &st, entities.ErrInvalidPlanningID
-		}
-		return f(st)
-	}
-}
-
 func (s *Service) checkReport(st entities.SpentTime, report entities.SpentTimeReport) (entities.SpentTimeReport, error) {
 	now := timeNowFunc()
 	if now < st.Last || now < st.Started {

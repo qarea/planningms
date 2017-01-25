@@ -82,24 +82,12 @@ func (s *SpentTimeInMemory) save(st entities.SpentTime) {
 	s.l.Unlock()
 }
 
-func (s *SpentTimeInMemory) getAndDelete(userID ctxtg.UserID) *entities.SpentTime {
-	s.l.Lock()
-	defer s.l.Unlock()
-	if st, ok := s.spentTime[userID]; ok {
-		delete(s.spentTime, userID)
-		return &st
-	}
-	return nil
-}
-
 func (s *SpentTimeInMemory) backupEvery(t time.Duration) {
 	go func() {
 		for {
 			<-time.After(t)
 			if err := s.withSharedLock(s.backup); err != nil {
 				log.ERR("Failed to backup %+v", err)
-			} else {
-				log.DEBUG("Backuped in-memory data")
 			}
 		}
 	}()
@@ -115,7 +103,6 @@ func (s *SpentTimeInMemory) restore() error {
 			log.ERR("Failed to read %s", s.tempBackupFilePath())
 			return err
 		}
-
 	}
 	var sts []entities.SpentTime
 	err = json.Unmarshal(b, &sts)

@@ -27,6 +27,13 @@ func TestVERSION(t *testing.T) {
 	}
 }
 
+func TestErrTimeout(t *testing.T) {
+	err := errWithLog(ctxtg.Context{}, "pre", context.DeadlineExceeded)
+	if err != entities.ErrTimeout {
+		t.Error("Unexpeceted error", err)
+	}
+}
+
 func TestCreatePlanningTokenErr(t *testing.T) {
 	ctx := testContext()
 	p := &ctxtgtest.Parser{
