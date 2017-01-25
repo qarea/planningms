@@ -8,6 +8,7 @@ echo 127.0.0.1    > config/mysql/host
 echo 3306         > config/mysql/port
 echo planning_db  > config/mysql/db
 echo root         > config/mysql/login
+echo 1234pwd      > config/mysql/pass
 
 narada-setup-mysql --clean
 narada-setup-mysql
