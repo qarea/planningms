@@ -83,6 +83,21 @@ func TestOpenedPlannings(t *testing.T) {
 	}
 }
 
+func TestAddSpentSpentTimeInvalidStatus(t *testing.T) {
+	defer prepareDB()()
+	db := mysqldb.New()
+	uid := ctxtg.UserID(rand.Int63())
+	st := NewPlanningStorage(db, second)
+	p1 := saveTestPlanningOpened(db, t, uid)
+	err := st.AddSpentTime(nil, entities.SpentTimeHistory{
+		PlanningID: p1.ID,
+		Status:     entities.SpentTimeStatus("invalid status"),
+	})
+	if err == nil {
+		t.Error("Error expected")
+	}
+}
+
 func TestSavePlannedTime(t *testing.T) {
 	defer prepareDB()()
 	db := mysqldb.New()
