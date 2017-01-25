@@ -1,5 +1,3 @@
-///  +build integration
-
 package storage
 
 import (
@@ -53,6 +51,15 @@ func TestOpenedPlannings(t *testing.T) {
 		p2.ID: latestEstimation(pts2),
 		p3.ID: latestEstimation(pts3),
 	}
+	_, err := saveHistory(db, entities.SpentTimeHistory{
+		PlanningID: p1.ID,
+		StartedAt:  10,
+		EndedAt:    20,
+		Status:     entities.Online,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
 	ps, err := st.OpenedPlannings(ctx, uid)
 	if err != nil {
 		t.Fatal(err)
@@ -73,6 +80,15 @@ func TestOpenedPlannings(t *testing.T) {
 		} else {
 			t.Error("Invalid sorting")
 		}
+	}
+}
+
+func TestSavePlannedTime(t *testing.T) {
+	defer prepareDB()()
+	db := mysqldb.New()
+	_, err := savePlannedTime(db, entities.PlannedTime{PlanningID: 123})
+	if err != entities.ErrInvalidPlanningID {
+		t.Error("Unexpeted err", err)
 	}
 }
 

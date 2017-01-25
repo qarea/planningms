@@ -49,6 +49,18 @@ func TestLoadFromDump(t *testing.T) {
 	}
 }
 
+func TestSuccessfullyLoadWithOutDump(t *testing.T) {
+	dir, clean := tempDir(t)
+	defer clean()
+	storage := NewSpentTimeInMemory(10*time.Hour, dir, 1*time.Second)
+	if storage == nil {
+		t.Error("Should be ok")
+	}
+	if len(storage.spentTime) > 0 {
+		t.Error("Should be empty")
+	}
+}
+
 func TestLoadFromDumpLoadFromTmpIfNotExist(t *testing.T) {
 	dir, clean := tempDir(t)
 	defer clean()
